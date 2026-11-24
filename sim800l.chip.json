@@ -1,0 +1,11 @@
+{
+  "name": "sim800l",
+  "author": "snehasish pramanik",
+  "pins": [
+    "VCC",
+    "GND",
+    "IN",
+    "OUT"
+  ],
+  "controls": []
+}
