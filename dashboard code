@@ -1,1 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Safety IoT Dashboard</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#101827;color:white;
+}
+header{
+ background:#19263b;padding:22px;
+ display:flex;justify-content:space-between;
+ align-items:center;flex-wrap:wrap;gap:12px;
+}
+h1{font-size:22px;margin:0}
+main{padding:25px;max-width:1100px;margin:auto}
+.grid{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+ gap:18px;margin-top:25px;
+}
+.card{
+ background:#1d2b40;padding:22px;
+ border-radius:14px;border:1px solid #34445a;
+}
+.card h3{color:#aabbd0;font-size:14px}
+.value{font-size:34px;font-weight:bold;margin:15px 0}
+.status{font-weight:bold;color:#38d996}
+.danger{color:#ff5252}
+#connection{font-size:13px;color:#ffca64}
+#alert{
+ margin-top:20px;padding:20px;border-radius:12px;
+ background:#173d31;color:#45e6a2;
+}
+#alert.danger{
+ background:#51252a;color:#ff7777;
+}
+#log{
+ margin-top:20px;background:#1d2b40;
+ padding:18px;border-radius:12px;
+ line-height:1.8;
+}
+small{color:#9aabc0}
+</style>
+</head>
+<body>
 
+<header>
+ <h1>🛡️ SMART SAFETY IoT</h1>
+ <span id="connection">Connecting to MQTT...</span>
+</header>
+
+<main>
+ <h2>Monitoring Dashboard</h2>
+ <small>Live sensor data from your ESP32 / Wokwi</small>
+
+ <section class="grid">
+  <div class="card">
+   <h3>🌡️ Temperature</h3>
+   <div class="value" id="temp">-- °C</div>
+   <small>Live temperature</small>
+  </div>
+
+  <div class="card">
+   <h3>💧 Humidity</h3>
+   <div class="value" id="humidity">-- %</div>
+   <small>Relative humidity</small>
+  </div>
+
+  <div class="card">
+   <h3>🔥 Gas Sensor</h3>
+   <div class="value" id="gas">--</div>
+   <small>Raw ADC reading</small>
+  </div>
+
+  <div class="card">
+   <h3>🚨 Safety Status</h3>
+   <div class="value status" id="status">WAITING</div>
+   <small>System condition</small>
+  </div>
+ </section>
+
+ <div id="alert">Waiting for sensor data...</div>
+
+ <section id="log">
+  <h3>Recent Activity</h3>
+  <div id="activity">No activity yet.</div>
+ </section>
+</main>
+
+<script>
+const topic = "snehasish/smart-safety-2026/data";
+
+const client = mqtt.connect(
+ "wss://broker.hivemq.com:8884/mqtt",
+ {clientId:"dashboard_"+Math.random().toString(16).slice(2)}
+);
+
+const connection = document.getElementById("connection");
+
+client.on("connect",()=>{
+ connection.textContent="● MQTT Connected";
+ connection.style.color="#38d996";
+ client.subscribe(topic);
+});
+
+client.on("error",(err)=>{
+ connection.textContent="MQTT connection error";
+ console.error(err);
+});
+
+client.on("offline",()=>{
+ connection.textContent="● Offline";
+ connection.style.color="#ff7777";
+});
+
+client.on("message",(receivedTopic,message)=>{
+ try{
+  const data=JSON.parse(message.toString());
+
+  document.getElementById("temp").textContent=
+   data.temperature+" °C";
+
+  document.getElementById("humidity").textContent=
+   data.humidity+" %";
+
+  document.getElementById("gas").textContent=data.gas;
+
+  const status=document.getElementById("status");
+  const alertBox=document.getElementById("alert");
+
+  status.textContent=data.status;
+
+  if(data.status==="DANGER"){
+   status.className="value danger";
+   alertBox.className="danger";
+   alertBox.textContent="⚠ DANGER! Abnormal sensor reading detected!";
+  }else{
+   status.className="value status";
+   alertBox.className="";
+   alertBox.textContent="✓ All monitored readings are within demo thresholds.";
+  }
+
+  document.getElementById("activity").textContent=
+   new Date().toLocaleTimeString()+
+   " | Temperature: "+data.temperature+
+   " | Gas: "+data.gas+
+   " | "+data.status;
+
+ }catch(error){
+  console.error("Invalid sensor data",error);
+ }
+});
+</script>
+
+</body>
+</html>
